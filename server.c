@@ -7,6 +7,7 @@
 #include <string.h>
 
 #define PORT 8080
+#define MAX_REQUEST_SIZE 1024
 
 int main() {
         struct sockaddr_in address;
@@ -40,6 +41,14 @@ int main() {
                         perror("Connection could not be made");
                         exit(EXIT_FAILURE);
                 }
+
+                char request[MAX_REQUEST_SIZE] = {0};
+                if((recv(new_socket, request, MAX_REQUEST_SIZE - 1, 0)) < 0){
+                        perror("No data supplied.");
+                        exit(EXIT_FAILURE);
+                }
+                request[MAX_REQUEST_SIZE] = '\0';
+                printf("Request: %s\n", request);
 
                 // char* response =  "Hello world\n";
                 // char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
