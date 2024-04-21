@@ -33,20 +33,24 @@ int main() {
                 exit(EXIT_FAILURE);
         }
         printf("Server is now live on port %d\n", PORT);
+        
+        while(1){
+                int new_socket = accept(sock, (struct sockaddr *) &address, (socklen_t *)&addr_len);
+                if (new_socket < 0) {
+                        perror("Connection could not be made");
+                        exit(EXIT_FAILURE);
+                }
 
-        int new_socket = accept(sock, (struct sockaddr *) &address, (socklen_t *)&addr_len);
-        if (new_socket < 0) {
-                perror("Connection could not be made");
-                exit(EXIT_FAILURE);
+                printf("Here");
+
+                char* response =  "Hello world\n";
+                char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
+                char buffer[1024];
+                sprintf(buffer, ok_header, strlen(response), response);
+                send(new_socket, buffer, strlen(buffer), 0);
+
+                close(new_socket);
         }
-
-        char* response =  "Hello world\n";
-        char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
-        char buffer[1024];
-        sprintf(buffer, ok_header, strlen(response), response);
-        send(new_socket, buffer, strlen(buffer), 0);
-
-        close(new_socket);
-	close(sock);
+        close(sock);
         return 0;
 }
