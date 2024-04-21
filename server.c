@@ -41,13 +41,28 @@ int main() {
                         exit(EXIT_FAILURE);
                 }
 
-                printf("Here");
+                // char* response =  "Hello world\n";
+                // char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
+                // char buffer[1024];
+                // sprintf(buffer, ok_header, strlen(response), response);
+                // send(new_socket, buffer, strlen(buffer), 0);
 
-                char* response =  "Hello world\n";
-                char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
-                char buffer[1024];
-                sprintf(buffer, ok_header, strlen(response), response);
-                send(new_socket, buffer, strlen(buffer), 0);
+                FILE *file = fopen("./src/index.html", "r");
+                if (file == NULL) {
+                        perror("That file could not be read");
+                        exit(EXIT_FAILURE);
+                }
+                
+                // Get the file size by using setting file position indicator
+                fseek(file, 0, SEEK_END);
+                long file_size = ftell(file);
+                fseek(file, 0, SEEK_SET);
+                
+                char file_buffer[file_size + 1];
+
+                fread(file_buffer, 1, file_size, file);
+                file_buffer[file_size] = '\0';
+                printf("HTML content:\n%s\n", file_buffer);
 
                 close(new_socket);
         }
