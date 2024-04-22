@@ -6,14 +6,49 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "http.h"
+
 #define PORT 8080
 #define MAX_REQUEST_SIZE 1024
 
-struct HTTPRequest{
-        char *method;
-        char *path;
-        char *version;
-};
+void *send_data(int socket, char *response, char *header){
+        size_t buffer_size = strlen(response) + strlen(header) + 1;
+        // char* response =  "Hello world\n";
+        // char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
+        char buffer[buffer_size];
+        sprintf(buffer, header, strlen(response), response);
+        send(socket, buffer, strlen(buffer), 0);
+}
+
+void *not_found(int socket){
+
+}
+
+struct HTTPRequest process_request(int socket){
+        char request[MAX_REQUEST_SIZE] = {0};
+        if((recv(socket, request, MAX_REQUEST_SIZE - 1, 0)) < 0){
+                perror("No data supplied.");
+                exit(EXIT_FAILURE);
+        }
+        printf("Request: %s\n", request);
+
+        struct HTTPRequest request_info;
+        request_info.method = (char *)malloc(strlen(request) + 1);
+        request_info.path = (char *)malloc(strlen(request) + 1);
+        request_info.version = (char *)malloc(strlen(request) + 1);
+
+        sscanf(request, "%s %s %s", request_info.method, request_info.path, request_info.version);
+
+        printf("Method: %s\n", request_info.method);
+        printf("Path: %s\n", request_info.path);
+        printf("Version: %s\n", request_info.version);
+
+        if(strcmp(request_info.path, "/") == 0){
+                strcpy(request_info.path, "/index");
+        }
+
+        return request_info;
+}
 
 int main() {
         struct sockaddr_in address;
@@ -48,42 +83,15 @@ int main() {
                         exit(EXIT_FAILURE);
                 }
 
-                char request[MAX_REQUEST_SIZE] = {0};
-                if((recv(new_socket, request, MAX_REQUEST_SIZE - 1, 0)) < 0){
-                        perror("No data supplied.");
-                        exit(EXIT_FAILURE);
-                }
-                request[MAX_REQUEST_SIZE] = '\0';
-                printf("Request: %s\n", request);
+                struct HTTPRequest request_info = process_request(new_socket);
 
-                struct HTTPRequest request_info;
-                request_info.method = (char *)malloc(strlen(request) + 1);
-                request_info.path = (char *)malloc(strlen(request) + 1);
-                request_info.version = (char *)malloc(strlen(request) + 1);
-
-                sscanf(request, "%s %s %s", request_info.method, request_info.path, request_info.version);
-
-                printf("Method: %s\n", request_info.method);
-                printf("Path: %s\n", request_info.path);
-                printf("Version: %s\n", request_info.version);
-
-                if(strcmp(request_info.path, "/") == 0){
-                        request_info.path = "index";
-                }
-
-                // char* response =  "Hello world\n";
-                // char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
-                // char buffer[1024];
-                // sprintf(buffer, ok_header, strlen(response), response);
-                // send(new_socket, buffer, strlen(buffer), 0);
-
-                char *file_path = (char *) malloc(strlen(request_info.path) + 11 );
+                char *file_path = (char *) malloc(strlen(request_info.path) + 11);
                 if(file_path == NULL){
                         perror("Malloc failed");
                         exit(EXIT_FAILURE);
                 }
 
-                sprintf(file_path, "./src/%s.html", request_info.path);
+                sprintf(file_path, "./src%s.html", request_info.path);
                 printf("File to fetch: %s", file_path);
 
                 FILE *file = fopen(file_path, "r");
@@ -101,6 +109,8 @@ int main() {
 
                 fread(file_buffer, 1, file_size, file);
                 file_buffer[file_size] = '\0';
+                char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
+                send_data(new_socket, file_buffer, ok_header);
                 printf("HTML content:\n%s\n", file_buffer);
                 
                 close(new_socket);
