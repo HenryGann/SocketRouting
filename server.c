@@ -20,8 +20,29 @@ void *send_data(int socket, char *response, char *header){
         send(socket, buffer, strlen(buffer), 0);
 }
 
-void *not_found(int socket){
+char *read_data(FILE *file){
+        // Get the file size by using setting file position indicator
+        fseek(file, 0, SEEK_END);
+        long file_size = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        
+        char *file_buffer = (char *)malloc(file_size + 1);
 
+        fread(file_buffer, 1, file_size, file);
+        file_buffer[file_size] = '\0';
+        return file_buffer;
+}
+
+void *not_found(int socket){
+        char* header = "HTTP/1.1 404 NOT FOUND\r\nContent-Length: %ld\r\n\r\n%s";
+        FILE *file = fopen("./src/not_found.html", "r");
+        char *data = read_data(file);
+        send_data(socket, data, header);
+}
+
+void *ok(int socket, char* data){
+        char* header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
+        send_data(socket, data, header);
 }
 
 struct HTTPRequest process_request(int socket){
@@ -96,22 +117,12 @@ int main() {
 
                 FILE *file = fopen(file_path, "r");
                 if (file == NULL) {
-                        perror("That file could not be read");
-                        exit(EXIT_FAILURE);
+                        not_found(new_socket);
                 }
-                
-                // Get the file size by using setting file position indicator
-                fseek(file, 0, SEEK_END);
-                long file_size = ftell(file);
-                fseek(file, 0, SEEK_SET);
-                
-                char file_buffer[file_size + 1];
-
-                fread(file_buffer, 1, file_size, file);
-                file_buffer[file_size] = '\0';
-                char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
-                send_data(new_socket, file_buffer, ok_header);
-                printf("HTML content:\n%s\n", file_buffer);
+                else{
+                        char *file_data = read_data(file);
+                        ok(new_socket, file_data);
+                }
                 
                 close(new_socket);
         }
