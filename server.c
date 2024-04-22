@@ -9,6 +9,12 @@
 #define PORT 8080
 #define MAX_REQUEST_SIZE 1024
 
+struct HTTPRequest{
+        char *method;
+        char *path;
+        char *version;
+};
+
 int main() {
         struct sockaddr_in address;
         int addr_len = sizeof(address);
@@ -50,6 +56,17 @@ int main() {
                 request[MAX_REQUEST_SIZE] = '\0';
                 printf("Request: %s\n", request);
 
+                struct HTTPRequest request_info;
+                request_info.method = (char *)malloc(strlen(request) + 1);
+                request_info.path = (char *)malloc(strlen(request) + 1);
+                request_info.version = (char *)malloc(strlen(request) + 1);
+
+                sscanf(request, "%s %s %s", request_info.method, request_info.path, request_info.version);
+
+                printf("Method: %s\n", request_info.method);
+                printf("Path: %s\n", request_info.path);
+                printf("Version: %s\n", request_info.version);
+
                 // char* response =  "Hello world\n";
                 // char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
                 // char buffer[1024];
@@ -72,7 +89,7 @@ int main() {
                 fread(file_buffer, 1, file_size, file);
                 file_buffer[file_size] = '\0';
                 printf("HTML content:\n%s\n", file_buffer);
-
+                
                 close(new_socket);
         }
         close(sock);
