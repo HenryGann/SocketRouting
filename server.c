@@ -11,10 +11,9 @@
 #define PORT 8080
 #define MAX_REQUEST_SIZE 1024
 
+// Format and send the request
 void *send_data(int socket, char *response, char *header){
         size_t buffer_size = strlen(response) + strlen(header) + 1;
-        // char* response =  "Hello world\n";
-        // char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
         char buffer[buffer_size];
         sprintf(buffer, header, strlen(response), response);
         send(socket, buffer, strlen(buffer), 0);
@@ -26,6 +25,7 @@ char *read_data(FILE *file){
         long file_size = ftell(file);
         fseek(file, 0, SEEK_SET);
         
+        // Allow for null-terminated string
         char *file_buffer = (char *)malloc(file_size + 1);
 
         fread(file_buffer, 1, file_size, file);
@@ -43,6 +43,29 @@ void *not_found(int socket){
 void *ok(int socket, char* data){
         char* header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
         send_data(socket, data, header);
+}
+
+char *construct_file_path(const char *request_path) {
+    // Check if the requested path ends with ".css"
+    if (strstr(request_path, ".css") != NULL) {
+        // If it does, construct the file path for a CSS file
+        char *file_path = (char *)malloc(strlen(request_path) + 6); // Length of "/src/" + ".css" + null terminator
+        if (file_path == NULL) {
+            perror("Memory allocation failed");
+            exit(EXIT_FAILURE);
+        }
+        sprintf(file_path, "./src%s", request_path);
+        return file_path;
+    } else {
+        // Otherwise, construct the file path for an HTML file
+        char *file_path = (char *)malloc(strlen(request_path) + 6); // Length of "/src/" + ".html" + null terminator
+        if (file_path == NULL) {
+            perror("Memory allocation failed");
+            exit(EXIT_FAILURE);
+        }
+        sprintf(file_path, "./src%s.html", request_path);
+        return file_path;
+    }
 }
 
 struct HTTPRequest process_request(int socket){
@@ -106,14 +129,8 @@ int main() {
 
                 struct HTTPRequest request_info = process_request(new_socket);
 
-                char *file_path = (char *) malloc(strlen(request_info.path) + 11);
-                if(file_path == NULL){
-                        perror("Malloc failed");
-                        exit(EXIT_FAILURE);
-                }
-
-                sprintf(file_path, "./src%s.html", request_info.path);
-                printf("File to fetch: %s", file_path);
+                char *file_path = construct_file_path(request_info.path);
+                printf("File to fetch: %s\n", file_path);
 
                 FILE *file = fopen(file_path, "r");
                 if (file == NULL) {
