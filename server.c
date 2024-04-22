@@ -67,13 +67,26 @@ int main() {
                 printf("Path: %s\n", request_info.path);
                 printf("Version: %s\n", request_info.version);
 
+                if(strcmp(request_info.path, "/") == 0){
+                        request_info.path = "index";
+                }
+
                 // char* response =  "Hello world\n";
                 // char* ok_header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
                 // char buffer[1024];
                 // sprintf(buffer, ok_header, strlen(response), response);
                 // send(new_socket, buffer, strlen(buffer), 0);
 
-                FILE *file = fopen("./src/index.html", "r");
+                char *file_path = (char *) malloc(strlen(request_info.path) + 11 );
+                if(file_path == NULL){
+                        perror("Malloc failed");
+                        exit(EXIT_FAILURE);
+                }
+
+                sprintf(file_path, "./src/%s.html", request_info.path);
+                printf("File to fetch: %s", file_path);
+
+                FILE *file = fopen(file_path, "r");
                 if (file == NULL) {
                         perror("That file could not be read");
                         exit(EXIT_FAILURE);
