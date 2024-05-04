@@ -1,15 +1,25 @@
+#define _XOPEN_SOURCE 700
+#define PORT 8080
+#define MAX_REQUEST_SIZE 1024
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <stdlib.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <string.h>
-
+#include <stdlib.h>
+#include <signal.h>
 #include "http.h"
 
-#define PORT 8080
-#define MAX_REQUEST_SIZE 1024
+
+static volatile sig_atomic_t exit_signal = 1;
+
+
+void signal_handler(int sig){
+        printf("\nExit signal detected. Exiting gracefully.\n");
+        exit_signal = 0;
+}
 
 // Format and send the request
 void *send_data(int socket, char *response, char *header){
@@ -38,11 +48,13 @@ void *not_found(int socket){
         FILE *file = fopen("./src/not_found.html", "r");
         char *data = read_data(file);
         send_data(socket, data, header);
+        free(data);
 }
 
 void *ok(int socket, char* data){
         char* header = "HTTP/1.1 200 OK\r\nContent-Length: %ld\r\n\r\n%s";
         send_data(socket, data, header);
+        free(data);
 }
 
 char *construct_file_path(const char *request_path) {
@@ -96,6 +108,9 @@ struct HTTPRequest process_request(int socket){
 
 int main() {
         struct sockaddr_in address;
+        struct sigaction act;
+        act.sa_handler = signal_handler;
+        sigaction(SIGINT, &act, NULL);
         int addr_len = sizeof(address);
 
         int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -120,7 +135,7 @@ int main() {
         }
         printf("Server is now live on port %d\n", PORT);
         
-        while(1){
+        while(exit_signal){
                 int new_socket = accept(sock, (struct sockaddr *) &address, (socklen_t *)&addr_len);
                 if (new_socket < 0) {
                         perror("Connection could not be made");
@@ -140,6 +155,11 @@ int main() {
                         char *file_data = read_data(file);
                         ok(new_socket, file_data);
                 }
+                free(file_path);
+                
+                free(request_info.method);
+                free(request_info.path);
+                free(request_info.version);
                 
                 close(new_socket);
         }
